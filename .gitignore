@@ -1,0 +1,27 @@
+# 操作系统生成的文件
+.DS_Store
+Thumbs.db
+
+# 虚拟环境相关
+myenv/
+
+# Python 缓存文件
+__pycache__/
+*.pyc
+
+# 日志文件
+*.log
+
+# 环境变量文件（如果你不想公开 .env 内容）
+.env
+
+# Streamlit 相关缓存
+.streamlit/cache/
+
+# 自动生成的文档
+docs/_build/
+
+# 打包文件
+dist/
+build/
+*.egg-info/
