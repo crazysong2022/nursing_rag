@@ -1,0 +1,23 @@
+# Web framework
+streamlit
+
+# Database toolkit
+SQLAlchemy
+
+# Database driver for PostgreSQL
+psycopg2-binary
+
+# Environment variables management
+python-dotenv
+
+# Vector database client for Pinecone
+pinecone-client
+
+# Sentence Transformers for generating embeddings
+sentence-transformers
+
+# OpenAI API client (if you're using OpenAI services)
+openai
+
+# Other necessary packages can be added here
+bcrypt

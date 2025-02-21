@@ -1,24 +1,25 @@
 from sqlalchemy import Column, Integer, String, Text, ForeignKey
 from sqlalchemy.orm import relationship
-from models.database import Base
+from sqlalchemy.ext.declarative import declarative_base
 
+Base = declarative_base()
 
 class User(Base):
     __tablename__ = 'users'
+    
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(255), unique=True, index=True)
-    password = Column(String(255))
-
-    # 关联护理选题信息
+    username = Column(String, unique=True, nullable=False)
+    
     nursing_topics = relationship("NursingTopic", back_populates="user")
-
 
 class NursingTopic(Base):
     __tablename__ = 'nursing_topics'
+    
     id = Column(Integer, primary_key=True, index=True)
-    topic_type = Column(String(255))
-    content = Column(Text)
-
-    # 关联用户
+    topic_type = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    conversation_history = Column(Text, default="")  # 使用 TEXT 类型，默认值为空字符串
     user_id = Column(Integer, ForeignKey('users.id'))
+    
     user = relationship("User", back_populates="nursing_topics")
+
