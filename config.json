@@ -1,0 +1,23 @@
+{
+    "menu_mapping": {
+        "辅助选题": "direction_assistant",
+        "凝练问题": "distill_question",
+        "可研方案": "feasibility_question",
+        "文献检索": "literature_search",
+        "文献管理": "literature_management",
+        "文献综述": "literature_review",
+        "数据管理": "data_management",
+        "数据分析": "data_analysis",
+        "结果呈现": "result_presentation",
+        "申报撰写": "application_writing",
+        "报告撰写": "report_writing",
+        "综述撰写": "review_writing",
+        "Meta分析": "meta_analysis",
+        "文献计量": "bibliometrics",
+        "原始研究": "original_research",
+        "语言润色": "language_refine",
+        "投稿格式": "submission_format",
+        "意见修改": "review_modification"
+    },
+    "module_path": "modules"
+}

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, ForeignKey,TIMESTAMP
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -20,6 +20,7 @@ class NursingTopic(Base):
     content = Column(Text, nullable=False)
     conversation_history = Column(Text, default="")  # 使用 TEXT 类型，默认值为空字符串
     user_id = Column(Integer, ForeignKey('users.id'))
+    created_at = Column(TIMESTAMP, default=text('CURRENT_TIMESTAMP'))
     
     user = relationship("User", back_populates="nursing_topics")
 
