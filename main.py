@@ -98,8 +98,23 @@ query_params = st.query_params
 if 'authentication_status' in query_params and 'user' in query_params:
     auth_status = query_params['authentication_status'] == 'True'
     user = query_params['user']
-    st.session_state['authentication_status'] = auth_status
-    st.session_state['user'] = user
+    # 验证用户是否存在于数据库中
+    connection = get_db_connection()
+    if connection:
+        try:
+            cursor = connection.cursor()
+            cursor.execute("SELECT * FROM users WHERE username = %s", (user,))
+            existing_user = cursor.fetchone()
+            if existing_user:
+                st.session_state['authentication_status'] = auth_status
+                st.session_state['user'] = user
+            else:
+                st.session_state['authentication_status'] = False
+        except psycopg2.Error as e:
+            st.error(f"验证用户失败: {e}")
+            st.session_state['authentication_status'] = False
+        finally:
+            connection.close()
 
 # 检查是否需要重新运行
 if st.session_state['rerun_flag']:
@@ -135,18 +150,26 @@ if st.session_state.get('authentication_status'):
     if menu[selected_menu]:
         sub_menu = st.sidebar.selectbox("子菜单", menu[selected_menu])
         
+        # 清理会话状态以避免模块间干扰
+        if 'current_module' in st.session_state and st.session_state['current_module'] != sub_menu:
+            st.session_state.clear()  # 清除所有会话状态
+            st.session_state['authentication_status'] = True  # 保留认证状态
+            st.session_state['user'] = st.session_state.get('user')  # 保留用户信息
+        
+        # 更新当前模块
+        st.session_state['current_module'] = sub_menu
+        
+        # 创建一个容器用于动态加载模块内容
+        module_container = st.empty()
+        
         if sub_menu:
             module_name = menu_mapping.get(sub_menu)
             if module_name:
                 try:
-                    # 删除以下调试信息
-                    # st.write(f"尝试加载模块: {MODULE_PATH}.{module_name}")  # 调试信息
                     module = importlib.import_module(f"{MODULE_PATH}.{module_name}")
-                    # st.write(f"模块加载成功: {module}")  # 调试信息
-                    
                     if hasattr(module, 'main'):
-                        # st.write(f"模块 {module_name} 包含 main 函数")  # 调试信息
-                        module.main()
+                        with module_container.container():  # 在容器中加载模块内容
+                            module.main()
                     else:
                         st.error(f"模块 {module_name} 中没有 main 函数")
                 except ModuleNotFoundError:
@@ -155,7 +178,6 @@ if st.session_state.get('authentication_status'):
                     st.error(f"模块 {module_name} 缺少 main 函数，请检查模块实现。")
                 except Exception as e:
                     st.error(f"加载模块 {module_name} 时发生未知错误: {e}")
-                    st.write(f"详细错误: {str(e)}")  # 打印详细错误信息
             else:
                 st.error("未找到对应的模块映射")
     
@@ -170,7 +192,12 @@ if st.session_state.get('authentication_status'):
         if connection:
             try:
                 cursor = connection.cursor()
-                cursor.execute("SELECT COUNT(*) FROM nursing_topics")
+                
+                # 查询总记录数
+                cursor.execute("""
+                    SELECT COUNT(DISTINCT content)
+                    FROM nursing_topics
+                """)
                 total_records = cursor.fetchone()[0]
                 
                 # 分页参数
@@ -178,19 +205,19 @@ if st.session_state.get('authentication_status'):
                 page_number = st.number_input("页码", min_value=1, max_value=(total_records // records_per_page) + 1, value=1, key="history_page_number")
                 offset = (page_number - 1) * records_per_page
                 
-                # 查询分页数据
+                # 查询分页数据（去重并排序）
                 cursor.execute("""
-                    SELECT topic_type, content, created_at 
-                    FROM nursing_topics 
-                    ORDER BY created_at DESC 
+                    SELECT content, topic_type, MAX(created_at) AS latest_created_at
+                    FROM nursing_topics
+                    GROUP BY content, topic_type
+                    ORDER BY latest_created_at DESC
                     LIMIT %s OFFSET %s
                 """, (records_per_page, offset))
                 results = cursor.fetchall()
                 
                 # 渲染分页数据
                 for row in results:
-                    topic_type, content, created_at = row
-                    created_date = created_at.date()
+                    content, topic_type, _ = row
                     
                     # 提取“输入了选题:”后面的内容
                     if "输入了选题:" in content:
@@ -198,12 +225,27 @@ if st.session_state.get('authentication_status'):
                     else:
                         topic_content = content
                     
-                    st.write(f"- **{topic_type}**: {topic_content}")
-            
+                    # 为每个 content 添加按钮
+                    if st.button(f"加载: {topic_content}", key=f"load_{content}"):
+                        # 更新会话状态
+                        st.session_state['selected_topic_type'] = topic_type  # 锁定 topic_type
+                        st.session_state['selected_content'] = content  # 锁定 content
+                        
+                        # 强制刷新界面
+                        st.rerun()
+        
             except psycopg2.Error as e:
                 st.error(f"加载历史记录失败: {e}")
             finally:
                 connection.close()
+
+    # 如果选中了某个 content，则加载其所有记录
+    if 'selected_content' in st.session_state:
+        # 创建一个容器用于动态加载模块内容
+        history_container = st.empty()
+        with history_container.container():  # 在容器中加载 history_assistant 内容
+            from modules.history_assistant import main as history_main
+            history_main()
 else:
     tab1, tab2 = st.tabs(["登录", "注册"])
     with tab1:
