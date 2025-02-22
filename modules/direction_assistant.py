@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 import json
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, joinedload
 from models.database import engine, Base
 from models.project_models import User, NursingTopic
 from openai import OpenAI
@@ -40,7 +40,7 @@ def main():
     
     # 初始化会话状态
     if 'conversation_history' not in st.session_state:
-        st.session_state.conversation_history = [{"role": "system", "content": "You are a helpful assistant."}]
+        st.session_state.conversation_history = []
     if 'new_nursing_topic' not in st.session_state:
         st.session_state.new_nursing_topic = None
     if 'last_question' not in st.session_state:
@@ -72,14 +72,14 @@ def main():
     elif selected_topic_type == "期望目标设定":
         expected_goal = st.text_input("请输入期望目标内容")
     
-    # 提交按钮逻辑
+    # 提交按钮逻辑（第一次提交问题）
     if st.button("提交"):
         username = st.session_state.get('user')
         user = session.query(User).filter(User.username == username).first()
         
         # 构建带上下文的 content
         if selected_topic_type == "期刊选题":
-            content = f"用户 {username} 在期刊选题栏目中，输入了选题: {journal_topic}"
+            content = f"肝炎的预防" if not journal_topic else journal_topic
         elif selected_topic_type == "专刊选题":
             content = f"用户 {username} 在专刊选题栏目中，输入科室: {department}，输入了护理问题: {nursing_issue}"
             if technology_deficiency:
@@ -95,8 +95,12 @@ def main():
         new_nursing_topic = NursingTopic(
             topic_type=selected_topic_type,
             content=content,
+            sub_content=content,
             user=user,
-            conversation_history=""  # 初始化对话历史为空字符串
+            conversation_history=json.dumps([
+                {"role": "user", "content": content},
+                {"role": "assistant", "content": ""}
+            ], ensure_ascii=False)
         )
         session.add(new_nursing_topic)
         session.commit()
@@ -106,35 +110,30 @@ def main():
         # 构建用户输入
         user_input = content
         if st.session_state.last_question != user_input:
-            # 调用大模型
-            answer = call_llm(user_input, st.session_state.conversation_history)
+            answer = call_llm(user_input, [{"role": "system", "content": "You are a helpful assistant."}] + st.session_state.conversation_history)
             st.session_state.conversation_history.append({"role": "user", "content": user_input})
             st.session_state.conversation_history.append({"role": "assistant", "content": answer})
             st.session_state.last_question = user_input
             st.session_state.last_answer = answer
             
-            # 更新会话状态中的对话历史
-            st.session_state.new_nursing_topic.conversation_history = json.dumps([
+            updated_history = [
                 {"role": "user", "content": user_input},
                 {"role": "assistant", "content": answer}
-            ], ensure_ascii=False)  # 禁用 ASCII 转义
+            ]
+            new_nursing_topic.conversation_history = json.dumps(updated_history, ensure_ascii=False)
             session.commit()
-            
-            # 有AI答案了，更新状态
             st.session_state.has_ai_answer = True
     
     # 显示对话历史
-    if st.session_state.new_nursing_topic:
-        # 确保对话历史是普通字符串，而不是 Unicode 转义序列
-        conversation_history = json.loads(st.session_state.new_nursing_topic.conversation_history) if st.session_state.new_nursing_topic.conversation_history else []
-        
-        for i, message in enumerate(conversation_history):
+    def display_conversation_history():
+        """显示当前会话的对话历史"""
+        for i, message in enumerate(st.session_state.conversation_history):
             if message["role"] == "user":
                 st.markdown(f'<div style="border: 1px solid lightgray; border-radius: 5px; padding: 10px; background-color: #2D2D2D; color: white;">**用户**: {message["content"]}</div>', unsafe_allow_html=True)
             elif message["role"] == "assistant":
                 answer = message['content']
                 lines = answer.split('\n')
-                short_answer = '\n'.join(lines[:2])  # 截取前两行
+                short_answer = '\n'.join(lines[:2])
                 is_expanded = st.session_state.expanded_answers.get(i, False)
                 if not is_expanded:
                     st.markdown(f'<div style="border: 1px solid lightgray; border-radius: 5px; padding: 10px; background-color: #2D2D2D; color: white;">**AI**: {short_answer}</div>', unsafe_allow_html=True)
@@ -144,17 +143,6 @@ def main():
                             if st.button(f"展开", key=f"expand_{i}"):
                                 st.session_state.expanded_answers[i] = True
                                 st.rerun()
-                        with col2:
-                            if st.button(f"➕", key=f"rag_{i}"):
-                                # 用户点击“➕”按钮时，将当前对话内容插入数据库
-                                current_topic_id = st.session_state.new_nursing_topic.id
-                                topic = session.query(NursingTopic).get(current_topic_id)
-                                if topic:
-                                    current_history = json.loads(topic.conversation_history) if topic.conversation_history else []
-                                    current_history.append(message)
-                                    topic.conversation_history = json.dumps(current_history, ensure_ascii=False)  # 禁用 ASCII 转义
-                                    session.commit()
-                                    st.success(f"对话内容已成功保存到 ID 为 {current_topic_id} 的记录中。")
                 else:
                     st.markdown(f'<div style="border: 1px solid lightgray; border-radius: 5px; padding: 10px; background-color: #2D2D2D; color: white;">**AI**: {answer}</div>', unsafe_allow_html=True)
                     col1, col2 = st.columns(2)
@@ -162,25 +150,17 @@ def main():
                         if st.button(f"收起", key=f"collapse_{i}"):
                             st.session_state.expanded_answers[i] = False
                             st.rerun()
-                    with col2:
-                        if st.button(f"➕", key=f"rag_{i}"):
-                            # 用户点击“➕”按钮时，将当前对话内容插入数据库
-                            current_topic_id = st.session_state.new_nursing_topic.id
-                            topic = session.query(NursingTopic).get(current_topic_id)
-                            if topic:
-                                current_history = json.loads(topic.conversation_history) if topic.conversation_history else []
-                                current_history.append(message)
-                                topic.conversation_history = json.dumps(current_history, ensure_ascii=False)  # 禁用 ASCII 转义
-                                session.commit()
-                                st.success(f"对话内容已成功保存到 ID 为 {current_topic_id} 的记录中。")
+    
+    # 如果有对话历史，则显示
+    if st.session_state.conversation_history:
+        display_conversation_history()
     
     # 只有在有AI答案后才显示新的提问框和提交按钮
     if st.session_state.has_ai_answer:
         new_question = st.text_input("继续提问", "")
         if st.button("提交新问题"):
-            # 使用不同的 system role
             new_system_role = "You are an expert in providing in - depth analysis based on previous conversations."
-            new_conversation_history = [{"role": "system", "content": new_system_role}] + st.session_state.conversation_history[1:]
+            new_conversation_history = [{"role": "system", "content": new_system_role}] + st.session_state.conversation_history
             if st.session_state.last_question != new_question:
                 new_answer = call_llm(new_question, new_conversation_history)
                 st.session_state.conversation_history.append({"role": "user", "content": new_question})
@@ -188,9 +168,31 @@ def main():
                 st.session_state.last_question = new_question
                 st.session_state.last_answer = new_answer
                 
-                # 更新会话状态中的对话历史
-                st.session_state.new_nursing_topic.conversation_history = json.dumps(st.session_state.conversation_history, ensure_ascii=False)  # 禁用 ASCII 转义
-                session.commit()
+                # 获取当前的 topic 和 content
+                current_topic = st.session_state.new_nursing_topic
+                if current_topic:
+                    # 使用 session.merge() 重新绑定对象到会话
+                    current_topic = session.merge(current_topic)
+                    
+                    # 新开一行记录
+                    new_nursing_topic = NursingTopic(
+                        topic_type=current_topic.topic_type,
+                        content=current_topic.content,
+                        sub_content=new_question,
+                        user=current_topic.user,  # 现在可以安全访问 user
+                        conversation_history=json.dumps([
+                            {"role": "user", "content": new_question},
+                            {"role": "assistant", "content": new_answer}
+                        ], ensure_ascii=False)
+                    )
+                    session.add(new_nursing_topic)
+                    session.commit()
+                    
+                    # 更新 st.session_state.new_nursing_topic
+                    st.session_state.new_nursing_topic = new_nursing_topic
+                    
+                    st.success("新问题已成功存储到数据库！")
+                
                 st.rerun()
     
     session.close()

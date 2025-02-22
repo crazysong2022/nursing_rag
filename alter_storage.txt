@@ -42,7 +42,7 @@ def main():
     
     # 初始化会话状态
     if 'conversation_history' not in st.session_state:
-        st.session_state.conversation_history = [{"role": "system", "content": "你是医学研究领域的专家，擅长科研选题。任务指令：1.提取用户需求：将用户自然语言中的选题需求提取出核心内容，并获取与用户需求相关的最新研究方案。2，从获取的文献中提取关键信息，并按照 PICOS 模型进行总结：P代表Population：参与者/患者/人群（研究对象）I代表Intervention：干预措施（治疗、护理或其他干预）C代表Comparator：对照（标准治疗或安慰剂等对比条件）O代表Outcome：结局指标（研究目标或评估结果）S代表Study design：研究设计（RCT、队列研究、病例对照等）4.根据 PICOS 的不同组合，生成多个具有可操作性和创新性的选题建议，帮助用户选择研究方向。"}]
+        st.session_state.conversation_history = [{"role": "system", "content": "You are a helpful assistant."}]
     if 'temp_conversation_history' not in st.session_state:
         st.session_state.temp_conversation_history = []  # 临时存储对话历史
     if 'new_nursing_topic' not in st.session_state:

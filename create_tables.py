@@ -15,8 +15,7 @@ def create_tables():
     # 列出需要创建的表对应的模型
     tables_to_create = [
         pm.User,
-        pm.NursingTopic,
-        pm.ConversationHistory  # Add the ConversationHistory model
+        pm.NursingTopic
     ]
 
     for table in tables_to_create:

@@ -139,8 +139,13 @@ if st.session_state.get('authentication_status'):
             module_name = menu_mapping.get(sub_menu)
             if module_name:
                 try:
+                    # 删除以下调试信息
+                    # st.write(f"尝试加载模块: {MODULE_PATH}.{module_name}")  # 调试信息
                     module = importlib.import_module(f"{MODULE_PATH}.{module_name}")
+                    # st.write(f"模块加载成功: {module}")  # 调试信息
+                    
                     if hasattr(module, 'main'):
+                        # st.write(f"模块 {module_name} 包含 main 函数")  # 调试信息
                         module.main()
                     else:
                         st.error(f"模块 {module_name} 中没有 main 函数")
@@ -150,86 +155,66 @@ if st.session_state.get('authentication_status'):
                     st.error(f"模块 {module_name} 缺少 main 函数，请检查模块实现。")
                 except Exception as e:
                     st.error(f"加载模块 {module_name} 时发生未知错误: {e}")
+                    st.write(f"详细错误: {str(e)}")  # 打印详细错误信息
             else:
                 st.error("未找到对应的模块映射")
     
     # 添加 Logout 按钮
-    if st.sidebar.button('Logout', on_click=logout):
+    if st.sidebar.button('Logout', on_click=logout, key="logout_button"):
         pass
     
     # 显示历史记录（固定在 Logout 按钮下方）
-    # 显示历史记录（固定在 Logout 按钮下方）
-st.sidebar.markdown("---")  # 分隔线
-st.sidebar.subheader("历史记录")
-
-connection = get_db_connection()
-if connection:
-    try:
-        cursor = connection.cursor()
-        cursor.execute("SELECT topic_type, content, created_at FROM nursing_topics ORDER BY created_at DESC")
-        results = cursor.fetchall()
-        
-        # 调试：打印查询结果
-        st.write("查询结果:", results)
-        
-        # 分组显示历史记录
-        now = datetime.now()
-        today = now.date()
-        yesterday = (now - timedelta(days=1)).date()
-        three_days_ago = (now - timedelta(days=3)).date()
-        seven_days_ago = (now - timedelta(days=7)).date()
-        
-        time_groups = {
-            "今天": [],
-            "昨天": [],
-            "三天前": [],
-            "七天前": []
-        }
-        
-        for row in results:
-            topic_type, content, created_at = row
-            created_date = created_at.date()
+    st.sidebar.markdown("---")  # 分隔线
+    with st.sidebar.expander("历史记录", expanded=False):  # 默认折叠
+        connection = get_db_connection()
+        if connection:
+            try:
+                cursor = connection.cursor()
+                cursor.execute("SELECT COUNT(*) FROM nursing_topics")
+                total_records = cursor.fetchone()[0]
+                
+                # 分页参数
+                records_per_page = 5  # 每页显示的记录数
+                page_number = st.number_input("页码", min_value=1, max_value=(total_records // records_per_page) + 1, value=1, key="history_page_number")
+                offset = (page_number - 1) * records_per_page
+                
+                # 查询分页数据
+                cursor.execute("""
+                    SELECT topic_type, content, created_at 
+                    FROM nursing_topics 
+                    ORDER BY created_at DESC 
+                    LIMIT %s OFFSET %s
+                """, (records_per_page, offset))
+                results = cursor.fetchall()
+                
+                # 渲染分页数据
+                for row in results:
+                    topic_type, content, created_at = row
+                    created_date = created_at.date()
+                    
+                    # 提取“输入了选题:”后面的内容
+                    if "输入了选题:" in content:
+                        topic_content = content.split("输入了选题:")[1].strip()
+                    else:
+                        topic_content = content
+                    
+                    st.write(f"- **{topic_type}**: {topic_content}")
             
-            # 提取“输入了选题:”后面的内容
-            if "输入了选题:" in content:
-                topic_content = content.split("输入了选题:")[1].strip()
-            else:
-                topic_content = content
-            
-            # 分组逻辑
-            if created_date == today:
-                time_groups["今天"].append((topic_type, topic_content))
-            elif created_date == yesterday:
-                time_groups["昨天"].append((topic_type, topic_content))
-            elif three_days_ago <= created_date < yesterday:
-                time_groups["三天前"].append((topic_type, topic_content))
-            elif seven_days_ago <= created_date < three_days_ago:
-                time_groups["七天前"].append((topic_type, topic_content))
-        
-        # 渲染分组内容
-        for group_name, items in time_groups.items():
-            if items:
-                st.sidebar.write(f"**{group_name}:**")
-                for topic_type, topic_content in items:
-                    st.sidebar.write(f"- **{topic_type}**: {topic_content}")
-            else:
-                st.sidebar.write(f"{group_name}: 暂无记录")
-    
-    except psycopg2.Error as e:
-        st.error(f"加载历史记录失败: {e}")
-    finally:
-        connection.close()
+            except psycopg2.Error as e:
+                st.error(f"加载历史记录失败: {e}")
+            finally:
+                connection.close()
 else:
     tab1, tab2 = st.tabs(["登录", "注册"])
     with tab1:
         st.title("登录")
-        username = st.text_input("用户名")
-        password = st.text_input("密码", type="password")
-        if st.button('登录', on_click=lambda: login(username, password)):
+        username = st.text_input("用户名", key="login_username")
+        password = st.text_input("密码", type="password", key="login_password")
+        if st.button('登录', on_click=lambda: login(username, password), key="login_button"):
             pass
     with tab2:
         st.title("注册")
-        new_username = st.text_input("新用户名")
-        new_password = st.text_input("新密码", type="password")
-        if st.button("注册", on_click=lambda: register(new_username, new_password)):
+        new_username = st.text_input("新用户名", key="register_username")
+        new_password = st.text_input("新密码", type="password", key="register_password")
+        if st.button("注册", on_click=lambda: register(new_username, new_password), key="register_button"):
             pass
