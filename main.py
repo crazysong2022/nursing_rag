@@ -136,7 +136,7 @@ if st.session_state.get('authentication_status'):
     
     # 定义菜单结构
     menu = {
-        "关于": [],
+        "AI助手": [],
         "科研选题及设计": ["辅助选题", "凝练问题", "可研方案"],
         "文献处理": ["文献检索", "文献管理", "文献综述"],
         "项目管理": ["数据管理", "数据分析", "结果呈现"],
@@ -180,6 +180,45 @@ if st.session_state.get('authentication_status'):
                     st.error(f"加载模块 {module_name} 时发生未知错误: {e}")
             else:
                 st.error("未找到对应的模块映射")
+
+    # 添加新的下拉框
+    selected_option = st.sidebar.selectbox("我的资源", ["选择资源", "我的选题", "我的方案", "我的文献", "我的项目", "我的文章", "我要投稿"])
+
+    # 根据选中的选项加载对应的模块内容
+    if selected_option != "选择资源":
+        # 创建一个容器用于动态加载模块内容
+        resource_container = st.empty()
+        
+        # 定义选项与模块的映射关系
+        option_module_mapping = {
+            "我的选题": "my_topics",
+            "我的方案": "my_plans",
+            "我的文献": "my_references",
+            "我的项目": "my_projects",
+            "我的文章": "my_articles",
+            "我要投稿": "my_submissions"
+        }
+        
+        # 获取对应的模块名称
+        module_name = option_module_mapping.get(selected_option)
+        
+        if module_name:
+            try:
+                # 动态加载模块
+                module = importlib.import_module(f"{MODULE_PATH}.{module_name}")
+                if hasattr(module, 'main'):
+                    with resource_container.container():  # 在容器中加载模块内容
+                        module.main()
+                else:
+                    st.error(f"模块 {module_name} 中没有 main 函数")
+            except ModuleNotFoundError:
+                st.error(f"未找到模块 {module_name}，请检查模块路径是否正确。")
+            except AttributeError:
+                st.error(f"模块 {module_name} 缺少 main 函数，请检查模块实现。")
+            except Exception as e:
+                st.error(f"加载模块 {module_name} 时发生未知错误: {e}")
+        else:
+            st.error("未找到对应的模块映射")
     
     # 添加 Logout 按钮
     if st.sidebar.button('Logout', on_click=logout, key="logout_button"):

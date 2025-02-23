@@ -12,10 +12,12 @@ def create_tables():
     """
     meta = MetaData()
     meta.reflect(bind=engine)
+    
     # 列出需要创建的表对应的模型
     tables_to_create = [
         pm.User,
-        pm.NursingTopic
+        pm.NursingTopic,
+        pm.MyGoals  # 添加 MyGoals 表
     ]
 
     for table in tables_to_create:

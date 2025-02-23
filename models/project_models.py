@@ -12,6 +12,7 @@ class User(Base):
     username = Column(String, unique=True, nullable=False)
     
     nursing_topics = relationship("NursingTopic", back_populates="user")
+    my_goals = relationship("MyGoals", back_populates="user")
 
 class NursingTopic(Base):
     __tablename__ = 'nursing_topics'
@@ -25,4 +26,19 @@ class NursingTopic(Base):
     created_at = Column(TIMESTAMP, default=text('CURRENT_TIMESTAMP'))
     
     user = relationship("User", back_populates="nursing_topics")
+
+class MyGoals(Base):
+        __tablename__ = 'my_goals'
+        
+        id = Column(Integer, primary_key=True, index=True)
+        user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+        my_topics = Column(Text, nullable=True)
+        my_plans = Column(Text, nullable=True)
+        my_articles = Column(Text, nullable=True)
+        my_projects = Column(Text, nullable=True)
+        my_writings = Column(Text, nullable=True)
+        my_manuscripts = Column(Text, nullable=True)
+        created_at = Column(TIMESTAMP, default=text('CURRENT_TIMESTAMP'))
+        
+        user = relationship("User", back_populates="my_goals")
 

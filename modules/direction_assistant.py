@@ -14,7 +14,7 @@ session = Session()
 def call_llm(user_input, messages):
     client = OpenAI(
         api_key=os.getenv("DASHSCOPE_API_KEY"),
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1  "
     )
     new_messages = messages + [{"role": "user", "content": user_input}]
     completion = client.chat.completions.create(
@@ -110,7 +110,7 @@ def main():
         # 构建用户输入
         user_input = content
         if st.session_state.last_question != user_input:
-            answer = call_llm(user_input, [{"role": "system", "content": "You are a helpful assistant."}] + st.session_state.conversation_history)
+            answer = call_llm(user_input, [{"role": "system", "content": "你是医学研究领域的专家，特别擅长护理方面的科研选题。你的任务指令是：首先将用户自然语言中的选题需求提取出核心内容，然后通过公开数据库获取与用户需求相关的最新研究方案文献，从获取的文献中提取关键信息，并按照 PICOS 模型进行总结：P，Population 参与者， 可以是患者或者人群 研究对象 ; I，Intervention干预措施，可以是治疗、护理或其他干预; C ，Comparator 对照，可以是标准治疗或安慰剂等对比条件；O，Outcome 结局指标，可以是研究目标或评估结果；S，Study design 研究设计，可以是RCT、队列研究、病例对照等。最后，输出排列组合建议：根据 PICOS 的不同组合，生成多个具有可操作性和创新性的选题建议，帮助用户选择研究方向。"}] + st.session_state.conversation_history)
             st.session_state.conversation_history.append({"role": "user", "content": user_input})
             st.session_state.conversation_history.append({"role": "assistant", "content": answer})
             st.session_state.last_question = user_input
