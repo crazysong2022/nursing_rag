@@ -17,7 +17,10 @@ def create_tables():
     tables_to_create = [
         pm.User,
         pm.NursingTopic,
-        pm.MyGoals  # 添加 MyGoals 表
+        pm.MyGoals,
+        pm.Project,  # 添加 Project 表
+        pm.DataFile,  # 添加 DataFile 表
+        pm.CleaningReport  # 添加 CleaningReport 表
     ]
 
     for table in tables_to_create:
