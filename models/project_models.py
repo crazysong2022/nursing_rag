@@ -15,6 +15,7 @@ class User(Base):
     my_goals = relationship("MyGoals", back_populates="user")
     projects = relationship("Project", back_populates="user")  # 新增关联
     writings = relationship("Writing", back_populates="user")  # 新增关联
+    manuscripts = relationship("Manuscript", back_populates="user")  # 新增关联
 
 class NursingTopic(Base):
     __tablename__ = 'nursing_topics'
@@ -89,3 +90,39 @@ class Writing(Base):
     
     user = relationship("User", back_populates="writings")
 
+class Manuscript(Base):
+    __tablename__ = 'manuscripts'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)  # 关联用户
+    title = Column(String, nullable=False)  # 文稿标题
+    content = Column(Text, nullable=False)  # 文稿内容
+    polished_content = Column(Text, nullable=True)  # 润色后的内容
+    journal_style = Column(String, nullable=True)  # 目标期刊风格（可选）
+    created_at = Column(TIMESTAMP, default=text('CURRENT_TIMESTAMP'))
+    updated_at = Column(TIMESTAMP, default=text('CURRENT_TIMESTAMP'), onupdate=text('CURRENT_TIMESTAMP'))
+
+    user = relationship("User", back_populates="manuscripts")
+    reviews = relationship("ReviewerComment", back_populates="manuscript")  # 关联审稿人意见
+
+class ReferencePaper(Base):
+    __tablename__ = 'reference_papers'
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)  # 参考文稿标题
+    content = Column(Text, nullable=False)  # 参考文稿内容
+    journal_name = Column(String, nullable=False)  # 期刊名称
+    style = Column(Text, nullable=True)  # 新增字段：风格分析结果
+    created_at = Column(TIMESTAMP, default=text('CURRENT_TIMESTAMP'))
+
+class ReviewerComment(Base):
+    __tablename__ = 'reviewer_comments'
+
+    id = Column(Integer, primary_key=True, index=True)
+    manuscript_id = Column(Integer, ForeignKey('manuscripts.id'), nullable=False)  # 关联用户文稿
+    comment = Column(Text, nullable=False)  # 审稿人意见
+    reply_letter = Column(Text, nullable=True)  # 回复信内容
+    revised_content = Column(Text, nullable=True)  # 修改后的文稿内容
+    created_at = Column(TIMESTAMP, default=text('CURRENT_TIMESTAMP'))
+
+    manuscript = relationship("Manuscript", back_populates="reviews")

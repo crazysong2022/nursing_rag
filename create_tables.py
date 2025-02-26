@@ -18,12 +18,15 @@ def create_tables():
         pm.User,
         pm.NursingTopic,
         pm.MyGoals,
-        pm.Project,  # 添加 Project 表
-        pm.DataFile,  # 添加 DataFile 表
-        pm.CleaningReport,  # 添加 CleaningReport 表
-        pm.Writing  # 添加 Writing 表
+        pm.Project,          # 添加 Project 表
+        pm.DataFile,         # 添加 DataFile 表
+        pm.CleaningReport,   # 添加 CleaningReport 表
+        pm.Writing,          # 添加 Writing 表
+        pm.Manuscript,       # 新增 Manuscript 表
+        pm.ReferencePaper,   # 新增 ReferencePaper 表
+        pm.ReviewerComment   # 新增 ReviewerComment 表
     ]
-
+    
     for table in tables_to_create:
         if table.__tablename__ not in meta.tables:
             try:
