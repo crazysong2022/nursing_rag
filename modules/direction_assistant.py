@@ -14,7 +14,7 @@ session = Session()
 def call_llm(user_input, messages):
     client = OpenAI(
         api_key=os.getenv("DASHSCOPE_API_KEY"),
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1  "
+        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
     )
     new_messages = messages + [{"role": "user", "content": user_input}]
     completion = client.chat.completions.create(
