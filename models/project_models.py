@@ -10,6 +10,7 @@ class User(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, nullable=False)
+    password = Column(String, nullable=False)
     
     nursing_topics = relationship("NursingTopic", back_populates="user")
     my_goals = relationship("MyGoals", back_populates="user")

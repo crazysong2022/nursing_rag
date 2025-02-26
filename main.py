@@ -57,6 +57,8 @@ def login(username, password):
             cursor.execute("SELECT password FROM users WHERE username = %s", (username,))
             result = cursor.fetchone()
             if result:
+                 # 修改此处，将字符串转换为字节类型
+                hashed_password = result[0].encode('utf-8')
                 hashed_password = bytes(result[0])
                 if bcrypt.checkpw(password.encode('utf-8'), hashed_password):
                     st.session_state['authentication_status'] = True
