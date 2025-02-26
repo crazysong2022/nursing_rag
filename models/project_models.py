@@ -14,6 +14,7 @@ class User(Base):
     nursing_topics = relationship("NursingTopic", back_populates="user")
     my_goals = relationship("MyGoals", back_populates="user")
     projects = relationship("Project", back_populates="user")  # 新增关联
+    writings = relationship("Writing", back_populates="user")  # 新增关联
 
 class NursingTopic(Base):
     __tablename__ = 'nursing_topics'
@@ -75,4 +76,16 @@ class CleaningReport(Base):
     created_at = Column(TIMESTAMP, default=text('CURRENT_TIMESTAMP'))
     
     data_file = relationship("DataFile", back_populates="cleaning_reports")
+
+class Writing(Base):
+    __tablename__ = 'writings'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    type = Column(String, nullable=False)  # 撰写类型
+    user_input = Column(Text, nullable=False)  # 用户输入的内容
+    generated_content = Column(Text, nullable=False)  # 生成的内容
+    created_at = Column(TIMESTAMP, default=text('CURRENT_TIMESTAMP'))
+    
+    user = relationship("User", back_populates="writings")
 
